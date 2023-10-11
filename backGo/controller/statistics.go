@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/cdr/tools"
@@ -19,11 +20,18 @@ func GetStatistics(context *gin.Context) {
 	context.BindJSON(&jsonData)
 
 	token := tools.GetToken()
+	fmt.Println("token: ", token)
 	random_token := tools.GetTokenForStatistics(token, jsonData.Numbers, jsonData.Starttime, jsonData.Endtime)
-	tools.GetCSV(token, random_token, jsonData.Numbers, jsonData.Starttime, jsonData.Endtime)
+	fmt.Println("random_token: ", random_token)
+	stringCSV := tools.GetCSV(token, random_token, jsonData.Numbers, jsonData.Starttime, jsonData.Endtime)
 
-	context.JSON(http.StatusUnauthorized, gin.H{
-		"message": "da",
+	response := tools.SendCVStoProcess(stringCSV)
+
+	context.JSON(http.StatusOK, gin.H{
+		"inbounds":           response.Inbounds,
+		"outbounds":          response.Outbounds,
+		"inbounds_answered":  response.Inbounds_answered,
+		"outbounds_answered": response.Outbounds_answered,
 	})
 
 }

@@ -33,7 +33,7 @@ func GetToken() string {
 		"version":  version,
 	})
 
-	responseBody := bytes.NewReader(postBody)
+	responseBody := bytes.NewBuffer(postBody)
 
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	resp, err := http.Post("https://172.25.31.100:8088/api/v1.10/login", "application/json", responseBody)
@@ -88,7 +88,6 @@ func updateToken(token string) string {
 }
 
 func GetTokenForStatistics(token string, number string, starttime string, endtime string) string {
-
 	params := url.Values{}
 	params.Add("token", token)
 
@@ -98,7 +97,7 @@ func GetTokenForStatistics(token string, number string, starttime string, endtim
 		"endtime":   endtime,
 	})
 
-	sendBody := bytes.NewReader(postBody)
+	sendBody := bytes.NewBuffer(postBody)
 
 	url := "https://172.25.31.100:8088/api/v2.0.0/cdr/get_random?" + params.Encode()
 	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
@@ -132,7 +131,7 @@ func GetTokenForStatistics(token string, number string, starttime string, endtim
 	return response.Random
 }
 
-func GetCSV(token string, random_token string, number string, starttime string, endtime string) {
+func GetCSV(token string, random_token string, number string, starttime string, endtime string) string {
 	params := url.Values{}
 	params.Add("number", number)
 	params.Add("starttime", starttime)
@@ -155,17 +154,56 @@ func GetCSV(token string, random_token string, number string, starttime string, 
 
 	stringBody := string(body)
 
-	f, err := os.Create("statistic.csv")
+	// f, err := os.Create("statistic.csv")
+
+	// if err != nil {
+	// 	fmt.Println("error: ", err)
+	// }
+
+	// defer f.Close()
+
+	// _, err2 := f.WriteString(stringBody)
+
+	// if err2 != nil {
+	// 	fmt.Println("error: ", err2)
+	// }
+
+	return stringBody
+}
+
+type ResponseStatistics struct {
+	Inbounds           int `json:"inbounds"`
+	Outbounds          int `json:"outbounds"`
+	Inbounds_answered  int `json:"inbounds_answered"`
+	Outbounds_answered int `json:"outbounds_answered"`
+}
+
+func SendCVStoProcess(stringCSV string) ResponseStatistics {
+
+	postBody, _ := json.Marshal(map[string]string{
+		"content": stringCSV,
+	})
+
+	sendBody := bytes.NewBuffer(postBody)
+
+	resp, err := http.Post("http://localhost:8000/process_data", "application/json", sendBody)
 
 	if err != nil {
 		fmt.Println("error: ", err)
 	}
 
-	defer f.Close()
-
-	_, err2 := f.WriteString(stringBody)
-
-	if err2 != nil {
-		fmt.Println("error: ", err2)
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("error: ", err)
 	}
+
+	var response ResponseStatistics
+
+	err = json.Unmarshal(body, &response)
+
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+
+	return response
 }

@@ -49,18 +49,42 @@
             </v-col>
 
             <v-col>
-                <v-card>
-                    <v-card-title>Отдел</v-card-title>
-                    <v-card-text>
-                        <v-select
-                            label="Название отдела"
-                            :items="departments_labels"
-                            v-model="select_department"
-                        >
-                        </v-select>
-                    </v-card-text>
+                <v-row>
+                    <v-card width="700">
+                        <v-card-title>Отдел</v-card-title>
+                        <v-card-text>
+                            <v-select
+                                label="Название отдела"
+                                :items="departments_labels"
+                                v-model="select_department"
+                                variant="solo"
+                            >
+                            </v-select>
+                        </v-card-text>
 
-                </v-card>
+                    </v-card>
+                </v-row>
+
+                <v-row v-if="visible_charts">
+                    <v-col>
+                        <PieChart 
+                            :labels="['Отвечено', 'Не отвечено']"
+                            :values="[this.inbounds_answered, this.inbounds_no_answered]"
+                            title="Внутренние"
+                        />
+                    </v-col>
+                    <v-col>
+                        <PieChart 
+                            :labels="['Отвечено', 'Не отвечено']"
+                            :values="[this.outbounds_answered, this.outbounds_no_answered]"
+                            title="Внешние"
+                        />
+                    </v-col>
+
+                </v-row>
+
+
+
             </v-col>
 
         </v-row>
@@ -82,10 +106,15 @@
 
 <script>
 import axios from 'axios';
+import PieChart from './PieChart.vue';
+
 
 export default{
-    data(){
-        return{
+    components: {
+        PieChart
+    },
+    data: () => ({
+        
            date_start: "",
            time_start: "",
            date_end: "",
@@ -116,9 +145,16 @@ export default{
             "Пресс-служба": "790,791",
             "Административно-хозяйственный отдел": "740,746,748,747,742,744,745,741,743",
             "Отдел информационных систем и автоматизации процессов": "700,701,702,703,704,705"
-           }
-        }
-    },
+           },
+
+           visible_charts: false,
+
+           inbounds_answered: 0,
+           inbounds_no_answered: 0,
+           outbounds_answered: 0,
+           outbounds_no_answered: 0
+        
+    }),
 
     methods: {
        FormatTimeDate(strDate, strTime){
@@ -133,16 +169,28 @@ export default{
        },
 
        getStatistics(){
-        const starttime = this.FormatTimeDate(this.date_start, this.time_start);
-        const endtime = this.FormatTimeDate(this.date_end, this.time_end);
-        const departments_map = new Map(Object.entries(this.departments_phone))
-        const numbers = departments_map.get(this.select_department)
+            const starttime = this.FormatTimeDate(this.date_start, this.time_start);
+            const endtime = this.FormatTimeDate(this.date_end, this.time_end);
+            const departments_map = new Map(Object.entries(this.departments_phone))
+            const numbers = departments_map.get(this.select_department)
 
-        axios.post('http://localhost:8080/statistics', {
-           numbers:  numbers,
-           starttime: starttime,
-           endtime: endtime
-        })
+            console.log(numbers)
+            console.log(starttime)
+            console.log(endtime)
+
+            axios.post('http://localhost:8080/statistics', {
+            numbers:  numbers,
+            starttime: starttime,
+            endtime: endtime
+            }).then(response => (
+                this.inbounds_answered = response.data.inbounds_answered,
+                this.inbounds_no_answered = response.data.inbounds - this.inbounds_answered,
+                this.outbounds_answered = response.data.outbounds_answered,
+                this.outbounds_no_answered = response.data.outbounds - this.outbounds_answered,
+                this.visible_charts = true
+            ))
+
+            
 
        }
     }
