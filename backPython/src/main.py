@@ -22,3 +22,4 @@ async def process_data(csv: CSV):
         "inbounds_answered": inbounds_answered,
         "outbounds_answered": outbounds_answered
     }
+ 
